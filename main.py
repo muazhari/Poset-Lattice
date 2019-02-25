@@ -1,7 +1,6 @@
 import poset_lattice as pl
 import random
 
-
 def main():
     list = [1, 2, 3, 4, 6, 9, 12, 18, 36]
     ds = pl.definerSet(list)
