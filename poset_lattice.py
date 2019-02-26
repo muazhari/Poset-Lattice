@@ -1,5 +1,11 @@
+'''
+Need improvement from the code and knowledge is used to built this.
+Sorry for the readableness and the quality of code not as your expectation.
+'''
+
 import networkx as nx
 import matplotlib.pyplot as plt
+from itertools import combinations
 
 # return GCD from pair of nums by modulating the nums iteratively.
 def gcd(a, b):
@@ -7,7 +13,6 @@ def gcd(a, b):
         a, b = b, a % b
     return a
 
-# return LCM from pair of nums.
 def lcm(a, b):
     return a * b / gcd(a, b)
 
@@ -25,6 +30,10 @@ class definerSet:
                          for divisor in self.raw
                          for num in self.raw
                          if num % divisor == 0]
+
+    # For not directly pointing to private variable.
+    def getter(self, fromVar):
+        return fromVar
 
 
 # Subclass, to do hasse things.
@@ -49,14 +58,14 @@ class hasse:
                                 if (a, b) != (c, d):
                                     yield (a, b, c, d)
 
-            rule1 = [x for x in self.definerSet.relation]
+            rule1 = self.definerSet.getter(self.definerSet.relation)
 
             # Remove unneeded transitive pair if b ≤ d and no p ∈ rule1 so that b ≤ p and p ≤ d.
             for a, b, c, d in rule_sorter(self.definerSet.relation, rule1):
                 if a == c and (b, d) in self.definerSet.relation:
                     rule1.remove((c, d))
 
-            rule2 = [x for x in rule1]
+            rule2 = rule1
 
             '''
             This loop has a bug if the same count of degree arise,
@@ -64,8 +73,10 @@ class hasse:
             don't have reliable knowledge to fix it.
             Sorry, and I really really appreciate if someone could fix it.
             '''
+            
             # Choose the most lower degree if 0 ≤ a and 0 ≤ c.
             count_a, count_c = 0, 0
+            
             for a, b, c, d in rule_sorter(rule1, rule2):
                 if b == d:
                     for i, j in rule2:
@@ -98,6 +109,7 @@ class hasse:
         print('Regret not In the rIght tIme :(')
 
         check = self.lattice.isLattice()
+
         if check[0] is True:
             type = 'Lattice Hasse Digram [{}]'.format(check[1])
         elif check[0] is False:
@@ -105,8 +117,8 @@ class hasse:
 
         plt.title(type)
 
-        pos = nx.spring_layout(h)
         # pos = nx.circular_layout(h)
+        pos = nx.spring_layout(h)
         nx.draw(h, pos, with_labels=True, node_color='r', edge_labels=True)
 
         plt.show()
@@ -147,9 +159,10 @@ class poset(definerSet):
     def transitive(self, rlist=False):
         for a, b in self.definerSet.relation:
             for c, d in self.definerSet.relation:
-                if b == c and ((a, d) not in self.definerSet.relation):
-                    print((a, b), 'and', (c, d), 'not transitive')
-                    return False
+                if b == c:
+                    if ((a, d) not in self.definerSet.relation):
+                        print('For', (a, d), 'from', (a, b), 'and', (c, d), 'not in Set.')
+                        return False
 
         if rlist is True:
             return self.definerSet.relation
@@ -159,6 +172,7 @@ class poset(definerSet):
     # True if all of 3 laws are True.
     def isPoset(self):
         laws_str = ['Reflective', 'Antisimetric', 'Transitive']
+
         laws = [self.reflective(),
                 self.antisimetric(),
                 self.transitive()]
@@ -177,10 +191,9 @@ class lattice:
 
     # Check if its what lattice or not.
     def isLattice(self):
-        for a in self.definerSet.raw:
-            for b in self.definerSet.raw:
-                if gcd(a, b) not in self.definerSet.raw or lcm(a, b) not in self.definerSet.raw:
-                    return (False, 'divisible')
+        for a, b in combinations(self.definerSet.raw, 2):
+            if gcd(a, b) not in self.definerSet.raw or lcm(a, b) not in self.definerSet.raw:
+                return (False, 'divisible')
 
         return (True, 'divisible')
 
@@ -188,45 +201,46 @@ class lattice:
     def irreducible(self, option):
         mj = []
 
-        if self.isLattice()[0] is True:
+        if self.isLattice() == (True, 'divisible'):
 
-            for a in self.definerSet.raw:
-                for b in self.definerSet.raw:
+            for a, b in combinations(self.definerSet.raw, 2):
 
-                    if option == 0:
-                        meet_join = gcd(a, b)
+                if option == 'meet':
+                    meet_join = gcd(a, b)
+                elif option == 'join':
+                    meet_join = lcm(a, b)
 
-                    elif option == 1:
-                        meet_join = lcm(a, b)
-
-                    if meet_join == a or meet_join == b:
-                        mj.append((a, b))
+                if meet_join == a or meet_join == b:
+                    mj.append((a, b))
 
             return mj
 
-        elif self.isLattice()[0] is False:
-            return (None, 'non-Divisible Lattice will be on works.')
+        else:
+            return (None, 'non-Lattice will be on works.')
 
     def meet_irreducible(self):
-        return self.irreducible(0)
+        return self.irreducible('meet')
 
     def join_irreducible(self):
-        return self.irreducible(1)
+        return self.irreducible('join')
 
     # Compare arg by its own lcm and gcd if match to the smallest & biggest element.
     def complement(self, arg=None):
-        cl = []
+        complements = []
+
         if self.isLattice()[0] is True:
-            for a in self.definerSet.raw:
-                if arg is not None:
+
+            if arg is not None:
+                for a in self.definerSet.raw:
                     if lcm(a, arg) == self.definerSet.raw[-1] and gcd(a, arg) == self.definerSet.raw[0]:
                         return True
-                    else:
-                        return False
 
-                elif arg is None:
-                    for b in self.definerSet.raw:
-                        if lcm(a, b) == self.definerSet.raw[-1] and gcd(a, b) == self.definerSet.raw[0]:
-                            cl.append((a, b))
+                return False
 
-        return cl        
+            elif arg is None:
+                for a, b in combinations(self.definerSet.raw, 2):
+                    if lcm(a, b) == self.definerSet.raw[-1] and gcd(a, b) == self.definerSet.raw[0]:
+                        complements.append((a, b))
+
+                return complements
+ 
